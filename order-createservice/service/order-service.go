@@ -17,6 +17,7 @@ type KafkaPublisher interface {
 type OrderRepository interface {
 	CreateOrder(order *model.Order) (*model.Order, error)
 	GetOrderByID(id uint) (*model.Order, error)
+	GetOrderByUserID(userID uint) ([]*model.Order, error)
 }
 
 type OrderService struct {
@@ -36,7 +37,7 @@ func NewOrderService(db OrderRepository, publisher KafkaPublisher, invClient pb.
 	return &OrderService{db: db, publisher: publisher, invClient: invClient}
 }
 
-func (s *OrderService) CreateOrder(itemName string, nums int) error {
+func (s *OrderService) CreateOrder(itemName string, nums int, userID uint) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -53,8 +54,10 @@ func (s *OrderService) CreateOrder(itemName string, nums int) error {
 	}
 
 	order := &model.Order{
+		UserID:   userID,
 		ItemName: itemName,
 		Nums:     nums,
+		Status:   "created",
 	}
 	savedOrder, err := s.db.CreateOrder(order)
 	if err != nil {
@@ -62,8 +65,8 @@ func (s *OrderService) CreateOrder(itemName string, nums int) error {
 			ProductId: itemName,
 			Quantity:  int32(nums),
 		}
-		rpllbackResp, rbErr := s.invClient.RollbackDeduct(ctx, rollbackReq)
-		if rbErr != nil || !rpllbackResp.Success {
+		rollbackResp, rbErr := s.invClient.RollbackDeduct(ctx, rollbackReq)
+		if rbErr != nil || !rollbackResp.Success {
 			return fmt.Errorf("failed to rollback inventory after order creation failure: %v, rollback error: %v", err, rbErr)
 		}
 		return err
@@ -78,4 +81,12 @@ func (s *OrderService) CreateOrder(itemName string, nums int) error {
 		return err
 	}
 	return nil
+}
+
+func (s *OrderService) GetOrderByID(id uint) (*model.Order, error) {
+	return s.db.GetOrderByID(id)
+}
+
+func (s *OrderService) GetOrdersByUserID(userID uint) ([]*model.Order, error) {
+	return s.db.GetOrderByUserID(userID)
 }

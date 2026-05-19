@@ -8,4 +8,6 @@ import (
 
 func RegisterRoutes(r *gin.Engine, orderhandler *handler.OrderHandler) {
 	r.POST("/orders", orderhandler.CreateOrder)
+	r.GET("/orders/:id", orderhandler.GetOrderByID)
+	r.GET("/users/:user-id/orders", orderhandler.GetOrdersByUserID)
 }

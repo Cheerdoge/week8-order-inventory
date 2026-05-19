@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"order-payment-kafka/order-createservice/model"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,7 +16,9 @@ type CreateOrderRequest struct {
 }
 
 type OrderService interface {
-	CreateOrder(itemName string, nums int) error
+	CreateOrder(itemName string, nums int, userID uint) error
+	GetOrderByID(id uint) (*model.Order, error)
+	GetOrdersByUserID(userID uint) ([]*model.Order, error)
 }
 
 type OrderHandler struct {
@@ -32,7 +36,7 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 		log.Printf("Failed to bind request: %v", err)
 		return
 	}
-	err := h.service.CreateOrder(req.ItemName, req.Nums)
+	err := h.service.CreateOrder(req.ItemName, req.Nums, req.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		log.Printf("Failed to create order: %v", err)
@@ -41,4 +45,46 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Order created successfully"})
 
+}
+
+func (h *OrderHandler) GetOrderByID(c *gin.Context) {
+	orderIDstr := c.Param("id")
+	var orderID uint
+	_, err := fmt.Sscanf(orderIDstr, "%d", &orderID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+		log.Printf("Failed to parse order ID: %v", err)
+		return
+	}
+	order, err := h.service.GetOrderByID(orderID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+		log.Printf("Failed to get order: %v", err)
+		return
+	}
+	c.JSON(http.StatusOK, order)
+}
+
+func (h *OrderHandler) GetOrdersByUserID(c *gin.Context) {
+	userIDstr := c.Param("user-id")
+	var userID uint
+	_, err := fmt.Sscanf(userIDstr, "%d", &userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		log.Printf("Failed to parse user ID: %v", err)
+		return
+	}
+	orders, err := h.service.GetOrdersByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Orders not found"})
+		log.Printf("Failed to get orders: %v", err)
+		return
+	}
+	orders, err = h.service.GetOrdersByUserID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Orders not found"})
+		log.Printf("Failed to get orders: %v", err)
+		return
+	}
+	c.JSON(http.StatusOK, orders)
 }
