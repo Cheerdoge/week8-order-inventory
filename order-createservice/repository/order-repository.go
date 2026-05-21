@@ -36,3 +36,7 @@ func (r *OrderRepository) GetOrderByUserID(userID uint) ([]*model.Order, error) 
 	}
 	return orders, nil
 }
+
+func (r *OrderRepository) UpdateOrder(order *model.Order) error {
+	return r.db.Save(order).Error
+}

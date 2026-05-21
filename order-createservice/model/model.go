@@ -5,5 +5,5 @@ type Order struct {
 	UserID   uint
 	ItemName string
 	Nums     int
-	Status   string
+	Status   OrderStatus
 }

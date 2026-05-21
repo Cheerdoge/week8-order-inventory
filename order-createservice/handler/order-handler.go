@@ -15,10 +15,16 @@ type CreateOrderRequest struct {
 	Nums     int    `json:"nums"`
 }
 
+type OrderChangeRequest struct {
+	Paymentmethod string `json:"payment_method"`
+}
+
 type OrderService interface {
 	CreateOrder(itemName string, nums int, userID uint) error
 	GetOrderByID(id uint) (*model.Order, error)
 	GetOrdersByUserID(userID uint) ([]*model.Order, error)
+	PaidOrder(orderID uint) error
+	CancelOrder(orderID uint) error
 }
 
 type OrderHandler struct {
@@ -87,4 +93,48 @@ func (h *OrderHandler) GetOrdersByUserID(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, orders)
+}
+
+func (h *OrderHandler) PaidOrder(c *gin.Context) {
+	var req OrderChangeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.Printf("Failed to bind request: %v", err)
+		return
+	}
+	orderIDstr := c.Param("id")
+	var orderID uint
+	_, err := fmt.Sscanf(orderIDstr, "%d", &orderID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+		log.Printf("Failed to parse order ID: %v", err)
+		return
+	}
+	err = h.service.PaidOrder(orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("Failed to mark order as paid: %v", err)
+		return
+	}
+	log.Printf("Order %d marked as paid successfully, payment method: %s", orderID, req.Paymentmethod)
+	c.JSON(http.StatusOK, gin.H{"message": "Order marked as paid successfully"})
+}
+
+func (h *OrderHandler) CancelOrder(c *gin.Context) {
+	orderIDstr := c.Param("id")
+	var orderID uint
+	_, err := fmt.Sscanf(orderIDstr, "%d", &orderID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+		log.Printf("Failed to parse order ID: %v", err)
+		return
+	}
+	err = h.service.CancelOrder(orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("Failed to cancel order: %v", err)
+		return
+	}
+	log.Printf("Order %d cancelled successfully", orderID)
+	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
 }
