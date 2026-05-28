@@ -2,16 +2,16 @@ package handler
 
 import (
 	"encoding/json"
-	"item-repository/model"
+	"item-repository/service"
 	"log"
 
 	"github.com/IBM/sarama"
 )
 
 type InventoryService interface {
-	GetItemByName(name string) (model.Item, error)
-	GetItemByID(id uint) (model.Item, error)
-	GetItems() ([]model.Item, error)
+	GetItemByName(name string) (service.ItemDTO, error)
+	GetItemByID(id uint) (service.ItemDTO, error)
+	GetItems() ([]service.ItemDTO, error)
 	ProcessOrder(orderID uint, itemname string, nums int) error
 }
 

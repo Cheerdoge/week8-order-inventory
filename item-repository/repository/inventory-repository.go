@@ -52,7 +52,8 @@ func (r *InventoryRepository) ReduceItemNum(name string, num int) error {
 	if err != nil {
 		return err
 	}
-	item.Num -= num
+	item.Stock -= num
+	item.AvailableStock -= num
 	if err := r.db.Save(item).Error; err != nil {
 		return err
 	}
@@ -61,13 +62,13 @@ func (r *InventoryRepository) ReduceItemNum(name string, num int) error {
 
 func (r *InventoryRepository) RepositoryInit() error {
 	items := []model.Item{
-		{Name: "item1", Num: 0},
-		{Name: "item2", Num: 200},
-		{Name: "item3", Num: 300},
+		{Name: "item1", Stock: 0, AvailableStock: 0, ReservedStock: 0},
+		{Name: "item2", Stock: 200, AvailableStock: 200, ReservedStock: 0},
+		{Name: "item3", Stock: 300, AvailableStock: 300, ReservedStock: 0},
 	}
 	for _, item := range items {
 		err := r.db.Where("name = ?", item.Name).
-			Assign(model.Item{Num: item.Num}).
+			Assign(model.Item{Stock: item.Stock, AvailableStock: item.AvailableStock, ReservedStock: item.ReservedStock}).
 			FirstOrCreate(&item).Error
 		if err != nil {
 			return err
@@ -122,8 +123,11 @@ func (r *InventoryRepository) ProcessOrder(orderID uint, itemname string, nums i
 
 func (r *InventoryRepository) PreDeduct(itemName string, nums int) error {
 	result := r.db.Model(&model.Item{}).
-		Where("name = ? AND num >= ?", itemName, nums).
-		UpdateColumn("num", gorm.Expr("num - ?", nums))
+		Where("name = ? AND available_stock >= ?", itemName, nums).
+		Updates(map[string]interface{}{
+			"available_stock": gorm.Expr("available_stock - ?", nums),
+			"reserved_stock":  gorm.Expr("reserved_stock + ?", nums),
+		})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -136,7 +140,10 @@ func (r *InventoryRepository) PreDeduct(itemName string, nums int) error {
 func (r *InventoryRepository) RollbackDeduct(itemName string, nums int) error {
 	result := r.db.Model(&model.Item{}).
 		Where("name = ?", itemName).
-		UpdateColumn("num", gorm.Expr("num + ?", nums))
+		Updates(map[string]interface{}{
+			"available_stock": gorm.Expr("available_stock + ?", nums),
+			"reserved_stock":  gorm.Expr("reserved_stock - ?", nums),
+		})
 
 	return result.Error
 }

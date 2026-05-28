@@ -35,9 +35,7 @@ func main() {
 	}
 	defer config.Publisher.Close()
 
-	etcdClient, err := clientv3.New(clientv3.Config{
-		Endpoints: []string{"127.0.0.1:2379"},
-	})
+	etcdClient, err := clientv3.New(clientv3.Config{Endpoints: []string{"127.0.0.1:2379"}})
 	if err != nil {
 		log.Fatalf("Failed to connect to etcd: %v", err)
 	}
