@@ -36,7 +36,7 @@ func NewServiceRegistry(endpoints []string) (*ServiceRegistry, error) {
 
 // Register 注册服务并维持心跳
 func (r *ServiceRegistry) Register(serviceName, serviceAddr string, ttl int64) error {
-	r.key = fmt.Sprintf("/services/%s/%s", serviceName, serviceAddr)
+	r.key = fmt.Sprintf("services/%s/%s", serviceName, serviceAddr)
 	r.value = `{"Addr":"` + serviceAddr + `"}`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
