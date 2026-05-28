@@ -13,7 +13,7 @@ func NewKafkaConsumer() (sarama.ConsumerGroup, error) {
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Consumer.Offsets.AutoCommit.Enable = false
 
-	brokers := []string{"127.0.0.1:9092"}
+	brokers := []string{APPConfig.KafkaBroker}
 	groupId := "inventory-service-group"
 	consumerGroup, err := sarama.NewConsumerGroup(brokers, groupId, config)
 	if err != nil {

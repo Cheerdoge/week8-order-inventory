@@ -35,21 +35,21 @@ func main() {
 
 	r := gin.Default()
 	router.RegisterRoutes(r, hde)
-	log.Println("Starting HTTP server on :8090")
+	log.Println("Starting HTTP server on ", ":"+config.APPConfig.ServicePort)
 	go func() {
-		if err := r.Run(":8090"); err != nil {
+		if err := r.Run(":" + config.APPConfig.ServicePort); err != nil {
 			log.Fatalf("Failed to run HTTP server: %v", err)
 		}
 	}()
 
 	grpcServer := grpc.NewServer()
 	go func() {
-		lis, err := net.Listen("tcp", ":50051")
+		lis, err := net.Listen("tcp", ":"+config.APPConfig.GRPCPort)
 		if err != nil {
 			log.Fatalf("Failed to listen: %v", err)
 		}
 		inventory.RegisterInventoryServiceServer(grpcServer, grpcHandler)
-		log.Println("Starting gRPC server on :50051")
+		log.Println("Starting gRPC server on ", config.APPConfig.GRPCPort)
 		if err := grpcServer.Serve(lis); err != nil {
 			log.Fatalf("Failed to serve gRPC server: %v", err)
 		}
@@ -78,12 +78,12 @@ func main() {
 		}
 	}()
 
-	reg, err := registry.NewServiceRegistry([]string{"127.0.0.1:2379"})
+	reg, err := registry.NewServiceRegistry([]string{config.APPConfig.EtcdEndpoints})
 	if err != nil {
 		log.Fatalf("Failed to connect to etcd: %v", err)
 	}
 
-	err = reg.Register("inventory-grpc-service", "127.0.0.1:50051", 5)
+	err = reg.Register("inventory-grpc-service", config.APPConfig.PODIP+":"+config.APPConfig.GRPCPort, 5)
 	if err != nil {
 		log.Fatalf("Failed to register service: %v", err)
 	}

@@ -22,7 +22,7 @@ func NewKafkaPublisher() error {
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.Consumer.Offsets.AutoCommit.Enable = false
 
-	producer, err := sarama.NewSyncProducer([]string{"127.0.0.1:9092"}, config)
+	producer, err := sarama.NewSyncProducer([]string{APPConfig.KafkaBroker}, config)
 	if err != nil {
 		return err
 	}

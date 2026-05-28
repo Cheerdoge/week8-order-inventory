@@ -35,7 +35,7 @@ func main() {
 	}
 	defer config.Publisher.Close()
 
-	etcdClient, err := clientv3.New(clientv3.Config{Endpoints: []string{"127.0.0.1:2379"}})
+	etcdClient, err := clientv3.New(clientv3.Config{Endpoints: []string{config.APPConfig.EtcdEndpoints}})
 	if err != nil {
 		log.Fatalf("Failed to connect to etcd: %v", err)
 	}
@@ -45,7 +45,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create etcd resolver: %v", err)
 	}
-	target := "etcd:////services/inventory-grpc-service"
+	target := "etcd:///services/inventory-grpc-service"
 
 	conn, err := grpc.NewClient(target,
 		grpc.WithResolvers(etcdResolver),
@@ -67,18 +67,18 @@ func main() {
 	go func() {
 		r := gin.Default()
 		router.RegisterRoutes(r, orderhandler)
-		log.Println("Starting server on :8080")
-		if err := r.Run(":8080"); err != nil {
+		log.Println("Starting server on port " + config.APPConfig.ServicePort)
+		if err := r.Run(":" + config.APPConfig.ServicePort); err != nil {
 			log.Fatalf("Failed to run server: %v", err)
 		}
 	}()
 
-	reg, err := registry.NewServiceRegistry([]string{"127.0.0.1:2379"})
+	reg, err := registry.NewServiceRegistry([]string{config.APPConfig.EtcdEndpoints})
 	if err != nil {
 		log.Fatalf("Failed to connect to etcd: %v", err)
 	}
 
-	err = reg.Register("order-create-service", "127.0.0.1:8080", 5)
+	err = reg.Register("order-create-service", config.APPConfig.PODIP+":"+config.APPConfig.ServicePort, 5)
 	if err != nil {
 		log.Fatalf("Failed to register service: %v", err)
 	}
